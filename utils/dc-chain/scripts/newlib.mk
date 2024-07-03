@@ -53,7 +53,6 @@ fixup-sh4-newlib-apply: fixup-sh4-newlib-init
 	cp $(kos_base)/include/sys/socket.h $(newlib_inc)/sys
 	cp $(kos_base)/include/arpa/inet.h $(newlib_inc)/arpa
 	cp $(kos_base)/include/netdb.h $(newlib_inc)
-	cp $(kos_base)/include/termios.h $(newlib_inc)
 ifndef MINGW32
 	ln -nsf $(kos_base)/include/kos $(newlib_inc)
 	ln -nsf $(kos_base)/kernel/arch/dreamcast/include/arch $(newlib_inc)
