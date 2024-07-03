@@ -42,6 +42,50 @@ struct sockaddr {
     char        sa_data[];
 };
 
+/** \brief
+    \headerfile sys/socket.h
+*/
+struct msghdr {
+    /** \brief Optional address. */
+    void          *msg_name;
+    /** \brief Size of address. */
+    socklen_t      msg_namelen;
+    /** \brief Scatter/gather array. */
+    struct iovec  *msg_iov;
+    /** \brief Members in msg_iov. */
+    int            msg_iovlen;
+    /** \brief Ancillary data; see below. */
+    void          *msg_control;
+    /** \brief Ancillary data buffer len. */
+    socklen_t      msg_controllen;
+    /** \brief Flags on received message. */
+    int            msg_flags;
+};
+
+/** \brief
+    \headerfile sys/socket.h
+ */
+struct cmsghdr {
+    /** \brief Data byte count, including the cmsghdr. */
+    socklen_t  cmsg_len;
+    /** \brief Originating protocol. */
+    int        cmsg_level;
+    /** \brief Protocol-specific type. */
+    int        cmsg_type;
+};
+
+/** \brief
+    \headerfile sys/socket.h
+ */
+struct ucred {
+    __uint32_t pid;
+    __uint32_t uid;
+    __uint32_t gid;
+};
+
+/** \brief Indicates that the data array contains the access rights to be sent or received. */
+#define SCM_RIGHTS 1
+
 /** \brief  Size of the struct sockaddr_storage.
     The size here is chosen for compatibility with anything that may expect the
     struct sockaddr_storage to be of size 128. Technically, since there are no
@@ -95,6 +139,9 @@ struct sockaddr_storage {
     underlying protocol.
 */
 #define SOCK_STREAM 2
+
+/** \brief Raw socket type. */
+#define SOCK_RAW 3
 
 /** \brief  Socket-level option setting.
 

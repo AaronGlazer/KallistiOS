@@ -1,3 +1,15 @@
+diff --color -ruN gcc-13.2.0/libgo/configure gcc-13.2.0-kos/libgo/configure
+--- gcc-13.2.0/libgo/configure	2023-12-16 02:09:33.046944794 -0800
++++ gcc-13.2.0-kos/libgo/configure	2023-12-16 02:09:29.962990190 -0800
+@@ -14129,7 +14129,7 @@
+ # All known GOARCH family values.
+ ALLGOARCHFAMILY="I386 ALPHA AMD64 ARM ARM64 IA64 M68K MIPS MIPS64 NIOS2 PPC PPC64 RISCV RISCV64 S390 S390X SH SPARC SPARC64 WASM"
+ 
+-GOARCH=unknown
++GOARCH=sh
+ case ${host} in
+   alpha*-*-*)
+     GOARCH=alpha
 diff --color -ruN gcc-13.2.0/gcc/config/sh/sh-c.cc gcc-13.2.0-kos/gcc/config/sh/sh-c.cc
 --- gcc-13.2.0/gcc/config/sh/sh-c.cc	2023-06-04 20:48:46.612552162 -0500
 +++ gcc-13.2.0-kos/gcc/config/sh/sh-c.cc	2023-06-04 20:49:03.486606055 -0500

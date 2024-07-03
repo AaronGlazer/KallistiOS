@@ -37,6 +37,8 @@ endif
 fixup-sh4-newlib-init: $(build_newlib)
 	-mkdir -p $(newlib_inc)
 	-mkdir -p $(newlib_inc)/sys
+	-mkdir -p $(newlib_inc)/netinet
+	-mkdir -p $(newlib_inc)/arpa
 
 fixup-sh4-newlib-apply: fixup-sh4-newlib-init
 	@echo "+++ Fixing up sh4 newlib includes..."
@@ -48,6 +50,14 @@ fixup-sh4-newlib-apply: fixup-sh4-newlib-init
 	cp $(kos_base)/include/pthread.h $(newlib_inc)
 	cp $(kos_base)/include/sys/_pthread.h $(newlib_inc)/sys
 	cp $(kos_base)/include/sys/sched.h $(newlib_inc)/sys
+	cp $(kos_base)/include/ucontext.h $(newlib_inc)
+	cp $(kos_base)/include/sys/dirent.h $(newlib_inc)/sys
+	cp $(kos_base)/include/netinet/*.h $(newlib_inc)/netinet
+	cp $(kos_base)/include/sys/uio.h $(newlib_inc)/sys
+	cp $(kos_base)/include/sys/socket.h $(newlib_inc)/sys
+	cp $(kos_base)/include/arpa/inet.h $(newlib_inc)/arpa
+	cp $(kos_base)/include/netdb.h $(newlib_inc)
+	cp $(kos_base)/include/termios.h $(newlib_inc)
 ifndef MINGW32
 	ln -nsf $(kos_base)/include/kos $(newlib_inc)
 	ln -nsf $(kos_base)/kernel/arch/dreamcast/include/arch $(newlib_inc)
