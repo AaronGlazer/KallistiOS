@@ -1,9 +1,3 @@
-/* KallistiOS ##version##
-
-   ucontext.h
-   Copyright (C) 2023 Aaron Glazer
-*/
-
 #ifndef __UCONTEXT_H
 #define __UCONTEXT_H
 

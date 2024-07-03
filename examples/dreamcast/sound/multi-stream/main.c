@@ -42,12 +42,13 @@ int main(int argc, char **argv) {
 
 
     for(;;) {
-        cond = get_cont_state();
+        if(!(cond = get_cont_state()))
+            continue;
         current_buttons = cond->buttons;
         changed_buttons = current_buttons ^ previous_buttons;
         previous_buttons = current_buttons;
         
-        // Play wav files if they arent playing already
+        // Play wav files if they aren't playing already
         if(button_pressed(current_buttons, changed_buttons, CONT_X)) {
             if(!wav_is_playing(faucet))
                 wav_play(faucet);

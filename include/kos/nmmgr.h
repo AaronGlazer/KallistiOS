@@ -5,8 +5,9 @@
 
 */
 
-/** \file   kos/nmmgr.h
-    \brief  Name manager.
+/** \file    kos/nmmgr.h
+    \brief   Name manager.
+    \ingroup system_namemgr
 
     This file contains the definitions of KOS' name manager. A "name" is a
     generic identifier for some kind of module. These modules may include
@@ -25,23 +26,31 @@ __BEGIN_DECLS
 #include <kos/limits.h>
 #include <sys/queue.h>
 
+/** \defgroup system_namemgr Name Manager
+    \brief                   Abstract Module System for KOS's VFS
+    \ingroup                 system
+*/
+
 /* Pre-define list types */
 struct nmmgr_handler;
 
-/** \brief  Name handler list type.
+/** \brief   Name handler list type.
+    \ingroup system_namemgr
 
     Contrary to what doxygen may think, this is not a function.
 */
 typedef LIST_HEAD(nmmgr_list, nmmgr_handler) nmmgr_list_t;
 
-/** \brief  List entry initializer for static structs.
+/** \brief   List entry initializer for static structs.
+    \ingroup system_namemgr
 
     If you are creating nmmgr handlers, this is what you should initialize the
     list_ent member with.
 */
 #define NMMGR_LIST_INIT { NULL }
 
-/** \brief  Name handler interface.
+/** \brief   Name handler interface.
+    \ingroup system_namemgr
 
     Every name handler must begin its information structures with this header.
     If the handler conforms to some well-defined interface (such as a VFS), then
@@ -51,12 +60,27 @@ typedef LIST_HEAD(nmmgr_list, nmmgr_handler) nmmgr_list_t;
 */
 typedef struct nmmgr_handler {
     char    pathname[NAME_MAX];   /* Path name */
-    int pid;            /* Process table ID for handler (0 == static) */
+    int pid;                /* Process table ID for handler (0 == static) */
     uint32  version;        /* Version code */
     uint32  flags;          /* Bitmask of flags */
     uint32  type;           /* Type of handler */
     LIST_ENTRY(nmmgr_handler)   list_ent;   /* Linked list entry */
 } nmmgr_handler_t;
+
+/** \brief   Alias handler interface.
+    \ingroup system_namemgr
+
+    The smallest possible extension of name handler, it has its own name 
+    but holds a pointer to a full handler of the appropriate type. This 
+    prevents the need to duplicate large vfs structures.
+
+*/
+typedef struct alias_handler {
+    /** \brief Name manager handler header */
+    nmmgr_handler_t nmmgr;
+
+    nmmgr_handler_t *alias;
+} alias_handler_t;
 
 /* Version codes ('version') have two pieces: a major and minor revision.
    A major revision (top 16 bits) means that the interfaces are totally
@@ -64,10 +88,24 @@ typedef struct nmmgr_handler {
    mostly-compatible but newer/older revisions of the implementing code. */
 
 /* Flag bits */
-/** \brief  This structure must be freed when removed. */
+/** \brief  This structure must be freed when removed. 
+    \ingroup system_namemgr
+*/
 #define NMMGR_FLAGS_NEEDSFREE   0x00000001
 
-/** \defgroup   nmmgr_types     Name handler types
+/** \brief  This structure maps into /dev/.
+    \ingroup system_namemgr
+*/
+#define NMMGR_FLAGS_INDEV       0x00000002
+
+/** \brief  This structure aliases another.
+    \ingroup system_namemgr
+*/
+#define NMMGR_FLAGS_ALIAS       0x00000004
+
+/** \defgroup   nmmgr_types     Handler Types
+    \brief                      Name handler types
+    \ingroup                    system_namemgr
 
     This is the set of all defined types of name manager handlers. All system
     types are defined below NMMGR_SYS_MAX.
@@ -88,17 +126,21 @@ typedef struct nmmgr_handler {
 #define NMMGR_SYS_MAX       0x10000     /* Here and above are user types */
 /** @} */
 
-/** \brief  Retrieve a name handler by name.
+/** \brief   Retrieve a name handler by name.
+    \ingroup system_namemgr
 
     This function will retrieve a name handler by its pathname.
 
     \param  name            The handler to look up
+    
     \return                 The handler, or NULL on failure.
 */
 nmmgr_handler_t * nmmgr_lookup(const char *name);
 
-/** \brief  Get the head element of the name list.
-
+/** \brief   Get the head element of the name list.
+    \ingroup system_namemgr
+    
+    \warning
     DO NOT MODIFY THE VALUE RETURNED BY THIS FUNCTION! In fact, don't ever call
     this function.
 
@@ -106,20 +148,24 @@ nmmgr_handler_t * nmmgr_lookup(const char *name);
 */
 nmmgr_list_t * nmmgr_get_list(void);
 
-/** \brief  Add a name handler.
+/** \brief   Add a name handler.
+    \ingroup system_namemgr
 
     This function adds a new name handler to the list in the kernel.
 
     \param  hnd             The handler to add
+    
     \retval 0               On success
 */
 int nmmgr_handler_add(nmmgr_handler_t *hnd);
 
-/** \brief  Remove a name handler.
+/** \brief   Remove a name handler.
+    \ingroup system_namemgr
 
     This function removes a name handler from the list in the kernel.
 
     \param  hnd             The handler to remove
+    
     \retval 0               On success
     \retval -1              If the handler wasn't found
 */

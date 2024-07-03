@@ -936,8 +936,10 @@ static dirent_t *fs_fat_readdir(void *h) {
     fh[fd].dent.size = dent->size;
     fh[fd].dent.time = fat_time_to_stat(dent->mdate, dent->mtime);
 
-    if(dent->attr & FAT_ATTR_DIRECTORY)
+    if(dent->attr & FAT_ATTR_DIRECTORY) {
         fh[fd].dent.attr = O_DIR;
+        fh[fd].dent.size = -1;
+    }
 
     /* We're done. Return the static dirent_t. */
     mutex_unlock(&fat_mutex);
@@ -1307,7 +1309,7 @@ static vfs_handler_t vh = {
         NMMGR_LIST_INIT         /* list */
     },
 
-    0, NULL,                    /* no cacheing, privdata */
+    0, NULL,                    /* no caching, privdata */
 
     fs_fat_open,                /* open */
     fs_fat_close,               /* close */

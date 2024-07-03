@@ -1,12 +1,15 @@
 /* KallistiOS ##version##
 
-    dc/video.h
-    Copyright (C) 2001 Anders Clerwall (scav)
+   dc/video.h
+
+   Copyright (C) 2001 Anders Clerwall (scav)
+   Copyright (C) 2023-2024 Donald Haase
 
 */
 
-/** \file   dc/video.h
-    \brief  Functions related to video output.
+/** \file    dc/video.h
+    \brief   Functions related to video output.
+    \ingroup video_display
 
     This file deals with the video output hardware in the Dreamcast. There are
     functions defined herein that deal with setting up the video hardware,
@@ -19,12 +22,29 @@
 #ifndef __DC_VIDEO_H
 #define __DC_VIDEO_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 
-#include <arch/types.h>
+/** \defgroup video_display Display
+    \brief                  Display and framebuffer configuration
+    \ingroup                video
+*/
 
-/** \defgroup vid_ctype Video Cable types
+/** \defgroup video_modes Modes
+    \brief                Video display modes and management
+    \ingroup              video_display
+*/
+
+/** \defgroup video_cables Cables
+    \brief                 Cable/connector types and management for display
+    \ingroup               video_modes
+*/
+
+/** \defgroup vid_ctype Types
+    \brief              Type of cable connected to the DC
+    \ingroup            video_cables
 
     The vid_check_cable() function will return one of this set of values to let
     you know what type of cable is connected to the Dreamcast. These are also
@@ -39,79 +59,82 @@ __BEGIN_DECLS
 #define CT_COMPOSITE    3   /**< \brief Composite cable or RF switch */
 /** @} */
 
-/** \defgroup vid_pmode Video pixel modes
+/** \defgroup video_modes_pixel Pixel Modes
+    \brief                      Pixel mode settings for the framebuffer
+    \ingroup                    video_modes
+*/
+
+/** \brief              Pixel mode values for the framebuffer
 
     This set of constants control the pixel mode that the framebuffer is set to.
-
-    @{
+    These are hardware-based values and get set in bits 2 and 3 of PVR_FB_CFG_1.
 */
-#define PM_RGB555   0       /**< \brief RGB555 pixel mode (15-bit) */
-#define PM_RGB565   1       /**< \brief RGB565 pixel mode (16-bit) */
-#define PM_RGB888P  2       /**< \brief RBG888 packed pixel mode (24-bit) */
-#define PM_RGB0888  3       /**< \brief RGB0888 pixel mode (32-bit) */
-#define PM_RGB888   PM_RGB0888 /**< \brief Backwards compatibility support */
-/** @} */
+typedef enum vid_pixel_mode {
+  PM_RGB555   = 0,       /**< \brief RGB555 pixel mode (15-bit) */
+  PM_RGB565   = 1,       /**< \brief RGB565 pixel mode (16-bit) */
+  PM_RGB888P  = 2,       /**< \brief RBG888 packed pixel mode (24-bit) */
+  PM_RGB0888  = 3,       /**< \brief RGB0888 pixel mode (32-bit) */
+  PM_RGB888   = 3        /**< \brief Backwards compatibility support */
+} vid_pixel_mode_t;
 
-/** \brief vid_pmode_bpp Video pixel mode depths */
-static const uint8 vid_pmode_bpp[4] = {2, 2, 3, 4};
+/** \brief   Video pixel mode depths
+    \ingroup video_modes_pixel
+*/
+static const uint8_t vid_pmode_bpp[4] = {2, 2, 3, 4};
 
-/** \brief  Generic display modes */
-enum {
+/** \defgroup video_modes_display   Types
+    \brief                          Display mode type values
+    \ingroup                        video_modes
+*/
+
+/** \brief   Generic Display Modes
+    \ingroup video_modes_display
+ */
+typedef enum vid_display_mode_generic {
     DM_GENERIC_FIRST = 0x1000,      /**< \brief First valid generic mode */
     DM_320x240 = 0x1000,            /**< \brief 320x240 resolution */
     DM_640x480,                     /**< \brief 640x480 resolution */
-    DM_800x608,                     /**< \brief 800x608 resolution */
     DM_256x256,                     /**< \brief 256x256 resolution */
     DM_768x480,                     /**< \brief 768x480 resolution */
     DM_768x576,                     /**< \brief 768x576 resolution */
     DM_GENERIC_LAST = DM_768x576    /**< \brief Last valid generic mode */
-};
+} vid_display_mode_generic_t;
 
-/** \brief  Multi-buffered mode setting.
+/** \brief   Multi-buffered mode setting.
+    \ingroup video_modes_display
 
-    OR this with the generic mode to get four framebuffers instead of one.
+    OR this with the generic mode to get multiple framebuffers instead of one.
 */
 #define DM_MULTIBUFFER  0x2000
 
 //-----------------------------------------------------------------------------
-// More specific modes (and actual indeces into the mode table)
+// More specific modes (and actual indices into the mode table)
 
-/** \brief  Specific display modes */
-enum {
+/** \brief   Specific Display Modes 
+    \ingroup video_modes_display
+*/
+typedef enum vid_display_mode {
     DM_INVALID = 0,                 /**< \brief Invalid display mode */
     // Valid modes below
     DM_320x240_VGA = 1,             /**< \brief 320x240 VGA 60Hz */
     DM_320x240_NTSC,                /**< \brief 320x240 NTSC 60Hz */
     DM_640x480_VGA,                 /**< \brief 640x480 VGA 60Hz */
     DM_640x480_NTSC_IL,             /**< \brief 640x480 NTSC Interlaced 60Hz */
-    DM_800x608_VGA,                 /**< \brief 800x608 VGA 60Hz */
     DM_640x480_PAL_IL,              /**< \brief 640x480 PAL Interlaced 50Hz */
     DM_256x256_PAL_IL,              /**< \brief 256x256 PAL Interlaced 50Hz */
     DM_768x480_NTSC_IL,             /**< \brief 768x480 NTSC Interlaced 60Hz */
     DM_768x576_PAL_IL,              /**< \brief 768x576 PAL Interlaced 50Hz */
     DM_768x480_PAL_IL,              /**< \brief 768x480 PAL Interlaced 50Hz */
     DM_320x240_PAL,                 /**< \brief 320x240 PAL 50Hz */
-    DM_320x240_VGA_MB,              /**< \brief 320x240 VGA 60Hz, 4FBs */
-    DM_320x240_NTSC_MB,             /**< \brief 320x240 NTSC 60Hz, 4FBs */
-    DM_640x480_VGA_MB,              /**< \brief 640x480 VGA 60Hz, 4FBs */
-    DM_640x480_NTSC_IL_MB,          /**< \brief 640x480 NTSC IL 60Hz, 4FBs */
-    DM_800x608_VGA_MB,              /**< \brief 800x608 VGA 60Hz, 4FBs */
-    DM_640x480_PAL_IL_MB,           /**< \brief 640x480 PAL IL 50Hz, 4FBs */
-    DM_256x256_PAL_IL_MB,           /**< \brief 256x256 PAL IL 50Hz, 4FBs */
-    DM_768x480_NTSC_IL_MB,          /**< \brief 768x480 NTSC IL 60Hz, 4FBs */
-    DM_768x576_PAL_IL_MB,           /**< \brief 768x576 PAL IL 50Hz, 4FBs */
-    DM_768x480_PAL_IL_MB,           /**< \brief 768x480 PAL IL 50Hz, 4FBs */
-    DM_320x240_PAL_MB,              /**< \brief 320x240 PAL 50Hz, 4FBs */
     // The below is only for counting..
     DM_SENTINEL,                    /**< \brief Sentinel value, for counting */
     DM_MODE_COUNT                   /**< \brief Number of modes */
-};
-
-/** \brief  The maximum number of framebuffers available. */
-#define VID_MAX_FB  4   // <-- This should be enough
+} vid_display_mode_t;
 
 // These are for the "flags" field of "vid_mode_t"
-/** \defgroup vid_flags Flags for the field in vid_mode_t.
+/** \defgroup vid_flags Flags
+    \brief              vid_mode_t Field Flags
+    \ingroup            video_modes
 
     These flags indicate various things related to the modes for a vid_mode_t.
 
@@ -123,7 +146,8 @@ enum {
 #define VID_PAL         0x00000008  /**< \brief 50Hz refresh rate, if not VGA */
 /** @} */
 
-/** \brief  Video mode structure.
+/** \brief   Video mode structure.
+    \ingroup video_modes
 
     KOS maintains a list of valid video modes internally that correspond to the
     specific display modes enumeration. Each of them is built of one of these.
@@ -131,36 +155,40 @@ enum {
     \headerfile dc/video.h
 */
 typedef struct vid_mode {
-    int     generic;    /**< \brief Generic mode type for vid_set_mode() */
-    uint16  width;      /**< \brief Width of the display, in pixels */
-    uint16  height;     /**< \brief Height of the display, in pixels */
-    uint32  flags;      /**< \brief Combination of one or more VID_* flags */
+    uint16_t  generic;    /**< \brief Generic mode type for vid_set_mode() */
+    uint16_t  width;      /**< \brief Width of the display, in pixels */
+    uint16_t  height;     /**< \brief Height of the display, in pixels */
+    uint32_t  flags;      /**< \brief Combination of one or more VID_* flags */
 
-    int16   cable_type; /**< \brief Allowed cable type */
-    uint16  pm;         /**< \brief Pixel mode */
+    int16_t   cable_type; /**< \brief Allowed cable type */
+    vid_pixel_mode_t  pm; /**< \brief Pixel mode */
 
-    uint16  scanlines;  /**< \brief Number of scanlines */
-    uint16  clocks;     /**< \brief Clocks per scanline */
-    uint16  bitmapx;    /**< \brief Bitmap window X position */
-    uint16  bitmapy;    /**< \brief Bitmap window Y position (automatically
+    uint16_t  scanlines;  /**< \brief Number of scanlines */
+    uint16_t  clocks;     /**< \brief Clocks per scanline */
+    uint16_t  bitmapx;    /**< \brief Bitmap window X position */
+    uint16_t  bitmapy;    /**< \brief Bitmap window Y position (automatically
                                     increased for PAL) */
-    uint16  scanint1;   /**< \brief First scanline interrupt position */
-    uint16  scanint2;   /**< \brief Second scanline interrupt position
+    uint16_t  scanint1;   /**< \brief First scanline interrupt position */
+    uint16_t  scanint2;   /**< \brief Second scanline interrupt position
                                     (automatically doubled for VGA) */
-    uint16  borderx1;   /**< \brief Border X starting position */
-    uint16  borderx2;   /**< \brief Border X stop position */
-    uint16  bordery1;   /**< \brief Border Y starting position */
-    uint16  bordery2;   /**< \brief Border Y stop position */
+    uint16_t  borderx1;   /**< \brief Border X starting position */
+    uint16_t  borderx2;   /**< \brief Border X stop position */
+    uint16_t  bordery1;   /**< \brief Border Y starting position */
+    uint16_t  bordery2;   /**< \brief Border Y stop position */
 
-    uint16  fb_curr;    /**< \brief Current framebuffer */
-    uint16  fb_count;   /**< \brief Number of framebuffers */
-    uint32  fb_base[VID_MAX_FB];    /**< \brief Offset to framebuffers */
+    uint16_t  fb_curr;    /**< \brief Current framebuffer */
+    uint16_t  fb_count;   /**< \brief Number of framebuffers */
+    size_t  fb_size;      /**< \brief Size of each framebuffer */
 } vid_mode_t;
 
-/** \brief  The list of builtin video modes. Do not modify these! */
+/** \brief   The list of builtin video modes. Do not modify these! 
+    \ingroup video_modes
+*/
 extern vid_mode_t vid_builtin[DM_MODE_COUNT];
 
-/** \brief  The current video mode. Do not modify directly! */
+/** \brief   The current video mode. Do not modify directly! 
+    \ingroup video_modes 
+*/
 extern vid_mode_t *vid_mode;
 
 // These point to the current drawing area. If you're not using a multi-buffered
@@ -170,14 +198,24 @@ extern vid_mode_t *vid_mode;
 // though (if you use vid_set_start, they'll point at the display base, for
 // compatibility's sake).
 
-/** \brief  16-bit size pointer to the current drawing area. */
-extern uint16 *vram_s;
+/** \defgroup video_fb Framebuffer
+    \brief             API for framebuffer management
+    \ingroup           video_display
+*/
 
-/** \brief  32-bit size pointer to the current drawing area. */
-extern uint32 *vram_l;
+/** \brief   16-bit size pointer to the current drawing area. 
+    \ingroup video_fb
+*/
+extern uint16_t *vram_s;
+
+/** \brief   32-bit size pointer to the current drawing area. 
+    \ingroup video_fb
+*/
+extern uint32_t *vram_l;
 
 
-/** \brief  Retrieve the connected video cable type.
+/** \brief   Retrieve the connected video cable type.
+    \ingroup video_cables
 
     This function checks the video cable and reports what it finds.
 
@@ -186,67 +224,143 @@ extern uint32 *vram_l;
     \retval CT_RGB          If a RGB/SCART cable is connected.
     \retval CT_COMPOSITE    If a composite cable or RF switch is connected.
 */
-int vid_check_cable(void);
+int8_t vid_check_cable(void);
 
-/** \brief  Set the VRAM base of the framebuffer.
+/** \brief   Set the VRAM convenience pointers.
+    \ingroup video_fb
 
-    This function sets the vram_s and vram_l pointsers to specified offset
+    This function sets the vram_s and vram_l pointers to specified offset
+    within VRAM. In multibuffered mode it allows manual management of them.
+
+    \param  base            The offset within VRAM to set the base to.
+*/
+void vid_set_vram(uint32_t base);
+
+/** \brief   Set the VRAM base of the framebuffer.
+    \ingroup video_fb
+
+    This function sets the vram_s and vram_l pointers to specified offset
     within VRAM and sets the start position of the framebuffer to the same
     offset.
 
     \param  base            The offset within VRAM to set the base to.
 */
-void vid_set_start(uint32 base);
+void vid_set_start(uint32_t base);
 
-/** \brief  Set the current framebuffer in a multibuffered setup.
+/** \brief   Get the VRAM base of a framebuffer.
+    \ingroup video_fb
+
+    This function gets the position of the specified framebuffer within VRAM.
+    Any invalid fb value will be treated as the current framebuffer.
+
+    \param  fb            The number of the framebuffer or -1 for current.
+*/
+uint32_t vid_get_start(int32_t fb);
+
+/** \brief   Set the current framebuffer in a multibuffered setup.
+    \ingroup video_fb
+
+    This function sets the displayed framebuffer to the specified buffer.
+    Unlike vid_set_fb, this does not point the vram pointers to the next
+    framebuffer, allowing for non-linear management of the FBs.
+
+    \param  fb              The framebuffer to display or any other value
+                                to display the next one.
+
+*/
+void vid_set_fb(int32_t fb);
+
+/** \brief   Flip to a framebuffer in a multibuffered setup.
+    \ingroup video_fb
 
     This function sets the displayed framebuffer to the specified buffer and
     sets the vram_s and vram_l pointers to point at the next framebuffer, to
-    allow for tearing-free framebuffer-direct drawing. The specified buffer 
-    is masked against (vid_mode->fb_count - 1) in order to loop around.
+    allow for tearing-free framebuffer-direct drawing.
 
-    \param  fb              The framebuffer to display (or -1 for the next one).
+    \param  fb              The framebuffer to display or any other value
+                                to display the next one.
+
 */
-void vid_flip(int fb);
+void vid_flip(int32_t fb);
 
-/** \brief  Set the border color of the display.
+/** \brief   Set the border color of the display.
+    \ingroup video_display
 
-    This sets the color of the border area of the display. On some screens, the
-    border area may not be shown at all, whereas on some displays you may see
-    the whole thing.
+    This sets the color of the border area of the display. 
+
+    \note
+    On some screens, the border area may not be shown at all,
+    whereas on some displays you may see the whole thing.
 
     \param  r               The red value of the color (0-255).
     \param  g               The green value of the color (0-255).
     \param  b               The blue value of the color (0-255).
+    
     \return                 Old border color value (RGB888)
 */
-uint32 vid_border_color(int r, int g, int b);
+uint32_t vid_border_color(uint8_t r, uint8_t g, uint8_t b);
 
-/** \brief  Clear the display.
+/** \brief   Clear the framebuffer.
+    \ingroup video_fb
 
-    This function sets the whole display to the specified color. Internally,
+    This function sets the whole framebuffer to the specified color. Internally,
     this uses the store queues to actually clear the display entirely.
+
+    \note
+    This operates via the vram convenience pointers. In multibuffered mode, 
+    by default it will clear the framebuffer you are currently writing to
+    rather than the one being displayed.
 
     \param  r               The red value of the color (0-255).
     \param  g               The green value of the color (0-255).
     \param  b               The blue value of the color (0-255).
 */
-void vid_clear(int r, int g, int b);
+void vid_clear(uint8_t r, uint8_t g, uint8_t b);
 
-/** \brief  Clear VRAM.
+/** \brief   Clear VRAM.
+    \ingroup video_vram
 
     This function is essentially a memset() for the whole of VRAM that will
     clear it all to 0 bytes.
 */
 void vid_empty(void);
 
-/** \brief  Wait for VBlank.
+/** \brief   Get the state of video output.
+    \ingroup video_display
+
+    This function gets the state of video output as set via vid_set_enabled.
+
+    \return                 true if enabled, false if not.
+*/
+bool vid_get_enabled(void);
+
+/** \brief   Enable/disable the display.
+    \ingroup video_display
+
+    This function enables or disables video output
+
+    \param  val             true to enable video output, false to disable.
+
+    \note
+    Unlike vid_clear/vid_empty this does not modify any framebuffer.
+    Instead it merely sets registers that immediately disable output.
+*/
+void vid_set_enabled(bool val);
+
+/** \defgroup video_misc Miscellaneous
+    \brief               Miscellaneous video API utilities
+    \ingroup             video
+*/
+
+/** \brief   Wait for VBlank.
+    \ingroup video_misc
 
     This function busy loops until the vertical blanking period starts.
 */
 void vid_waitvbl(void);
 
-/** \brief  Set the video mode.
+/** \brief   Set the video mode.
+    \ingroup video_modes
 
     This function sets the current video mode to the one specified by the
     parameters.
@@ -254,9 +368,10 @@ void vid_waitvbl(void);
     \param  dm              The display mode to use. One of the DM_* values.
     \param  pm              The pixel mode to use. One of the PM_* values.
 */
-void vid_set_mode(int dm, int pm);
+void vid_set_mode(int dm, vid_pixel_mode_t pm);
 
-/** \brief  Set the video mode.
+/** \brief   Set the video mode.
+    \ingroup video_modes
 
     This function sets the current video mode to the mode structure passed in.
     You can use this to add support to your program for modes that KOS doesn't
@@ -267,7 +382,14 @@ void vid_set_mode(int dm, int pm);
 */
 void vid_set_mode_ex(vid_mode_t *mode);
 
-/** \brief  Initialize the video system.
+/** \defgroup video_init Initialization
+    \brief               Initialization and shutdown of the video subsystem
+    \ingroup             video
+
+    @{
+*/
+
+/** \brief   Initialize the video system.
 
     This function initializes the video display, setting the mode to the
     specified parameters, clearing vram, and setting the first framebuffer as
@@ -276,18 +398,21 @@ void vid_set_mode_ex(vid_mode_t *mode);
     \param  disp_mode       The display mode to use. One of the DM_* values.
     \param  pixel_mode      The pixel mode to use. One of the PM_* values.
 */
-void vid_init(int disp_mode, int pixel_mode);
+void vid_init(int disp_mode, vid_pixel_mode_t pixel_mode);
 
-/** \brief  Shut down the video system.
+/** \brief   Shut down the video system.
 
     This function reinitializes the video system to what dcload and friends
     expect it to be.
 */
 void vid_shutdown(void);
 
-/** \brief  Take a screenshot.
+/** @} */
 
-    This function takes the current framebuffer (vram_s/vram_l) and dumps it out
+/** \brief   Take a screenshot.
+    \ingroup video_fb
+
+    This function takes the current framebuffer (/vram_l) and dumps it out
     to a PPM file.
 
     \param  destfn          The filename to save to.

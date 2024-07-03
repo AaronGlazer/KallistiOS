@@ -6,8 +6,9 @@
 
 */
 
-/** \file   dc/g2bus.h
-    \brief  G2 bus memory interface.
+/** \file    dc/g2bus.h
+    \brief   G2 bus memory interface.
+    \ingroup system_g2bus
 
     This file provides low-level support for accessing devices on the G2 bus in
     the Dreamcast. The G2 bus contains the AICA, as well as the expansion port.
@@ -38,6 +39,13 @@ __BEGIN_DECLS
 #include <arch/types.h>
 
 #include <dc/fifo.h>
+
+/** \defgroup system_g2bus  G2 Bus
+    \brief                  Driver for accessing the devices on the G2 Bus
+    \ingroup                system
+
+    @{
+*/
 
 /** \name       List of G2 Bus channels
  
@@ -132,7 +140,7 @@ void g2_dma_shutdown(void);
     is used in with g2_lock() and g2_unlock().
 */
 typedef struct { 
-    uint32_t irq_state;    /** \brief IRQ state when entering a G2 critical block */
+    int irq_state;    /** \brief IRQ state when entering a G2 critical block */
 } g2_ctx_t;
 
 /* Internal constants to access suspend registers for G2 DMA. They are not meant for
@@ -335,6 +343,8 @@ void g2_memset_8(uintptr_t address, uint8_t c, size_t amt);
     must do this at least for every 8 32-bit writes that you execute.
 */
 void g2_fifo_wait(void);
+
+/** @} */
 
 __END_DECLS
 

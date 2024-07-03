@@ -5,8 +5,9 @@
 
 */
 
-/** \file   dc/fs_dcload.h
-    \brief  Implementation of dcload "filesystem".
+/** \file    dc/fs_dcload.h
+    \brief   Implementation of dcload "filesystem".
+    \ingroup vfs_dcload
 
     This file contains declarations related to using dcload, both in its -ip and
     -serial forms. This is only used for dcload-ip support if the internal
@@ -27,6 +28,14 @@ __BEGIN_DECLS
 #include <arch/types.h>
 #include <kos/fs.h>
 #include <kos/dbgio.h>
+
+/** \defgroup vfs_dcload    PC
+    \brief                  VFS driver for accessing a remote PC via
+                            DC-Load/Tool
+    \ingroup                vfs
+
+    @{
+*/
 
 /* \cond */
 extern dbgio_handler_t dbgio_dcload;
@@ -131,13 +140,15 @@ int     dcload_unlink(vfs_handler_t * vfs, const char *fn);
 
 /* Init func */
 void fs_dcload_init_console(void);
-int fs_dcload_init(void);
-int fs_dcload_shutdown(void);
+void fs_dcload_init(void);
+void fs_dcload_shutdown(void);
 
 /* Init func for dcload-ip + lwIP */
 int fs_dcload_init_lwip(void *p);
 
 /* \endcond */
+
+/** @} */
 
 __END_DECLS
 

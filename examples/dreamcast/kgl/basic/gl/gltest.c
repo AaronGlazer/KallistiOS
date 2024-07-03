@@ -26,7 +26,7 @@ Thanks to NeHe's tutorials for the texture.
 This example demonstrates some of the differences between KGL and OpenGL.
 
 Notice how we actually call glEnable(GL_BLEND) to enable transparency.
-This remains in effect untill we call glDisable(GL_BLEND).
+This remains in effect until we call glDisable(GL_BLEND).
 In OpenGL, there is no glKosFinishList() like in KGL.
 
 Also, in OpenGL we call glutSwapBuffers() to flush the vertices to the GPU.
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
     }
 
     pvr_get_stats(&stats);
-    printf("VBL Count: %ld, last_time: %d, frame rate: %f fps\n",
+    printf("VBL Count: %d, last_time: %lld, frame rate: %f fps\n",
            stats.vbl_count, stats.frame_last_time, (double)stats.frame_rate);
 
     return 0;

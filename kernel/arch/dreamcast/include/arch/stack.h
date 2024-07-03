@@ -5,8 +5,9 @@
 
 */
 
-/** \file   arch/stack.h
-    \brief  Stack traces.
+/** \file    arch/stack.h
+    \brief   Stack tracing.
+    \ingroup debugging_stacktrace
 
     The functions in this file deal with doing stack traces. These functions
     will do a stack trace, as specified, printing it out to stdout (usually a
@@ -23,6 +24,13 @@
 __BEGIN_DECLS
 
 #include <arch/types.h>
+
+/** \defgroup debugging_stacktrace  Stack Traces
+    \brief                          API for managing stack backtracing
+    \ingroup                        debugging
+
+    @{
+*/
 
 /** \brief  Do a stack trace from the current function.
 
@@ -45,7 +53,9 @@ void arch_stk_trace(int n);
     \param  fp              The frame pointer to start from.
     \param  n               The number of frames to leave off.
 */
-void arch_stk_trace_at(uint32 fp, int n);
+void arch_stk_trace_at(uint32_t fp, size_t n);
+
+/** @} */
 
 __END_DECLS
 

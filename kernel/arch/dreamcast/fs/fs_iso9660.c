@@ -187,8 +187,8 @@ static uint32 iso_733(const uint8 *from) {
 
 
 /********************************************************************************/
-/* Low-level block cacheing routines. This implements a simple queue-based
-   LRU/MRU cacheing system. Whenever a block is requested, it will be placed
+/* Low-level block caching routines. This implements a simple queue-based
+   LRU/MRU caching system. Whenever a block is requested, it will be placed
    on the MRU end of the queue. As more blocks are loaded than can fit in
    the cache, blocks are deleted from the LRU end. */
 
@@ -928,10 +928,11 @@ int iso_reset(void) {
    time someone calls in it'll get reset. */
 static int iso_last_status;
 static int iso_vblank_hnd;
-static void iso_vblank(uint32 evt) {
+static void iso_vblank(uint32 evt, void *data) {
     int status, disc_type;
 
     (void)evt;
+    (void)data;
 
     /* Get the status. This may fail if a CD operation is in
        progress in the foreground. */
@@ -1021,7 +1022,7 @@ static vfs_handler_t vh = {
         NMMGR_LIST_INIT
     },
 
-    0, NULL,            /* no cacheing, privdata */
+    0, NULL,            /* no caching, privdata */
 
     iso_open,
     iso_close,
@@ -1052,7 +1053,7 @@ static vfs_handler_t vh = {
 };
 
 /* Initialize the file system */
-int fs_iso9660_init(void) {
+void fs_iso9660_init(void) {
     int i;
 
     /* Reset fd's */
@@ -1077,14 +1078,14 @@ int fs_iso9660_init(void) {
     iso_last_status = -1;
 
     /* Register with the vblank */
-    iso_vblank_hnd = vblank_handler_add(iso_vblank);
+    iso_vblank_hnd = vblank_handler_add(iso_vblank, NULL);
 
     /* Register with VFS */
-    return nmmgr_handler_add(&vh.nmmgr);
+    nmmgr_handler_add(&vh.nmmgr);
 }
 
 /* De-init the file system */
-int fs_iso9660_shutdown(void) {
+void fs_iso9660_shutdown(void) {
     int i;
 
     /* De-register with vblank */
@@ -1100,5 +1101,5 @@ int fs_iso9660_shutdown(void) {
     mutex_destroy(&cache_mutex);
     mutex_destroy(&fh_mutex);
 
-    return nmmgr_handler_remove(&vh.nmmgr);
+    nmmgr_handler_remove(&vh.nmmgr);
 }

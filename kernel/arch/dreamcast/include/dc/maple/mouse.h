@@ -5,8 +5,9 @@
 
 */
 
-/** \file   dc/maple/mouse.h
-    \brief  Definitions for using the mouse device.
+/** \file    dc/maple/mouse.h
+    \brief   Definitions for using the mouse device.
+    \ingroup mouse
 
     This file contains the definitions needed to access the Maple mouse type
     device.
@@ -21,9 +22,16 @@
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 
-#include <arch/types.h>
+#include <stdint.h>
 
-/** \defgroup   mouse_buttons   Mouse button codes
+/** \defgroup   mouse   Mouse
+    \brief              Driver for the Dreamcast's Mouse Input Device
+    \ingroup            peripherals
+*/
+
+/** \defgroup   mouse_buttons   Buttons
+    \brief                      Masks for the buttons on a mouse
+    \ingroup                    mouse
 
     These are the possible buttons to press on a maple bus mouse.
 
@@ -34,20 +42,23 @@ __BEGIN_DECLS
 #define MOUSE_SIDEBUTTON    (1<<3)  /**< \brief Side mouse button */
 /** @} */
 
-/** \brief  Mouse center value in the raw condition structure. */
+/** \brief   Mouse center value in the raw condition structure. 
+    \ingroup mouse
+ */
 #define MOUSE_DELTA_CENTER      0x200
 
-/* Raw mouse condition structure */
+/** \cond */
 typedef struct {
-    uint16 buttons;
-    uint16 dummy1;
-    int16 dx;
-    int16 dy;
-    int16 dz;
-    uint16 dummy2;
-    uint32 dummy3;
-    uint32 dummy4;
+    uint16_t    buttons;
+    uint16_t    dummy1;
+    int16_t     dx;
+    int16_t     dy;
+    int16_t     dz;
+    uint16_t    dummy2;
+    uint32_t    dummy3;
+    uint32_t    dummy4;
 } mouse_cond_t;
+/** \endcond */
 
 /* More civilized mouse structure. There are several significant
    differences in data interpretation between the "cooked" and
@@ -59,7 +70,8 @@ typedef struct {
    Note that this is what maple_dev_status() will return.
  */
 
-/** \brief  Mouse status structure.
+/** \brief   Mouse status structure.
+    \ingroup mouse
 
     This structure contains information about the status of the mouse device,
     and can be fetched with maple_dev_status().
@@ -70,7 +82,7 @@ typedef struct {
     /** \brief  Buttons pressed bitmask.
         \see    mouse_buttons
     */
-    uint32  buttons;
+    uint32_t  buttons;
 
     /** \brief  X movement value */
     int dx;

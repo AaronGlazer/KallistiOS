@@ -1,9 +1,6 @@
 # Sega Dreamcast Toolchains Maker (dc-chain)
 # This file is part of KallistiOS.
-#
-# Created by Jim Ursetto (2004)
-# Initially adapted from Stalin's build script version 0.3.
-#
+
 
 gdb_log = $(logdir)/build-$(gdb_name).log
 
@@ -43,25 +40,25 @@ $(stamp_gdb_build): patch_gdb
 	@echo "+++ Building GDB..."
 	rm -f $@
 	> $(log)
-	-rm -rf build-$(gdb_name)
-	mkdir build-$(gdb_name)
-	cd build-$(gdb_name); \
+	-rm -rf $(build)
+	mkdir $(build)
+	cd $(build); \
         ../$(gdb_name)/configure \
           --disable-werror \
-          --prefix=$(sh_prefix) \
+          --prefix=$(sh_toolchain_path) \
           --target=$(sh_target) \
           CC="$(CC)" \
           CXX="$(CXX)" \
           $(macos_gdb_configure_args) \
           $(static_flag) \
           $(to_log)
-	$(MAKE) $(makejobs) -C build-$(gdb_name) $(to_log)
+	$(MAKE) $(jobs_arg) -C $(build) $(to_log)
 	touch $@
 
 # This step runs post install to sign the sh-elf-gdb binary on MacOS
 macos_codesign_gdb: $(stamp_gdb_install)
 	@echo "+++ Codesigning GDB..."
-	codesign --sign "-" $(sh_prefix)/bin/sh-elf-gdb
+	codesign --sign "-" $(sh_toolchain_path)/bin/sh-elf-gdb
 
 # If Host is MacOS then place Codesign step into dependency chain
 ifeq ($(MACOS), 1)
@@ -77,17 +74,20 @@ install_gdb: $(GDB_INSTALL_TARGET)
 # The 'install-strip' mode support is partial in GDB so there is a little hack
 # below to remove useless debug symbols
 # See: https://sourceware.org/legacy-ml/gdb-patches/2012-01/msg00335.html
+
 $(stamp_gdb_install): build_gdb
 	@echo "+++ Installing GDB..."
 	rm -f $@
-	$(MAKE) -C build-$(gdb_name) install DESTDIR=$(DESTDIR) $(to_log)
+	$(MAKE) -C $(build) install DESTDIR=$(DESTDIR) $(to_log)
 	@if test "$(install_mode)" = "install-strip"; then \
-		$(MAKE) -C build-$(gdb_name)/gdb $(install_mode) DESTDIR=$(DESTDIR) $(to_log); \
-		gdb_run=$(sh_prefix)/bin/$(sh_target)-run$(executable_extension); \
+		$(MAKE) -C $(build)/gdb $(install_mode) DESTDIR=$(DESTDIR) $(to_log); \
+		gdb_run=$(sh_toolchain_path)/bin/$(sh_target)-run$(executable_extension); \
 		if test -f $${gdb_run}; then \
 			strip $${gdb_run}; \
 		fi; \
 	fi;
 	touch $@
+	$(clean_up)
 
+gdb: build = build-$(gdb_name)
 gdb: install_gdb

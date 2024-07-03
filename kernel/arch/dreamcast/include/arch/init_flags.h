@@ -7,8 +7,9 @@
 
 */
 
-/** \file   arch/init_flags.h
-    \brief  Dreamcast-specific initialization-related flags and macros.
+/** \file    arch/init_flags.h
+    \brief   Dreamcast-specific initialization-related flags and macros.
+    \ingroup init_flags
 
     This file provides initialization-related flags that are specific to the
     Dreamcast architecture.
@@ -28,9 +29,8 @@
 #include <kos/init_base.h>
 __BEGIN_DECLS
 
-/** \defgroup dreamcast_initflags   Dreamcast-specific initialization flags.
-
-    \brief Dreamcast-specific KOS_INIT Exports
+/** \brief   Dreamcast-specific KOS_INIT Exports
+    \ingroup init_flags
 
     This macro contains a list of all of the possible DC-specific
     exported functions based on their associated initialization flags.
@@ -44,6 +44,15 @@ __BEGIN_DECLS
     \sa KOS_INIT_FLAGS()
 */
 #define KOS_INIT_FLAGS_ARCH(flags) \
+    KOS_INIT_FLAG_NONE(flags, INIT_NO_DCLOAD, dcload_init); \
+    KOS_INIT_FLAG_NONE(flags, INIT_NO_DCLOAD, fs_dcload_init_console); \
+    KOS_INIT_FLAG_NONE(flags, INIT_NO_DCLOAD, fs_dcload_shutdown); \
+    KOS_INIT_FLAG_NONE(flags, INIT_NO_DCLOAD, arch_init_net_dcload_ip); \
+    KOS_INIT_FLAG(flags, INIT_NO_DCLOAD, arch_init_net_no_dcload); \
+    KOS_INIT_FLAG(flags, INIT_CDROM, cdrom_init); \
+    KOS_INIT_FLAG(flags, INIT_CDROM, cdrom_shutdown); \
+    KOS_INIT_FLAG(flags, INIT_CDROM, fs_iso9660_init); \
+    KOS_INIT_FLAG(flags, INIT_CDROM, fs_iso9660_shutdown); \
     KOS_INIT_FLAG(flags, INIT_CONTROLLER, cont_init); \
     KOS_INIT_FLAG(flags, INIT_CONTROLLER, cont_shutdown); \
     KOS_INIT_FLAG(flags, INIT_KEYBOARD, kbd_init); \
@@ -67,8 +76,9 @@ __BEGIN_DECLS
     KOS_INIT_FLAG(flags, INIT_MAPLE_ALL, maple_shutdown)
 
 
-/** \name  Init Flags
-    \brief Dreamcast-specific initialization flags.
+/** \defgroup kos_init_flags_dc Dreamcast-Specific Flags
+    \brief    Dreamcast-specific initialization flags.
+    \ingroup  init_flags
 
     These are the Dreamcast-specific flags that can be specified with
     KOS_INIT_FLAGS.
@@ -78,7 +88,7 @@ __BEGIN_DECLS
 */
 
 /** \brief Default init flags for the Dreamcast. */
-#define INIT_DEFAULT_ARCH   (INIT_MAPLE_ALL)
+#define INIT_DEFAULT_ARCH   (INIT_MAPLE_ALL | INIT_CDROM)
 
 #define INIT_CONTROLLER     0x00001000  /**< \brief Enable Controller maple driver */
 #define INIT_KEYBOARD       0x00002000  /**< \brief Enable Keyboard maple driver */
@@ -89,6 +99,8 @@ __BEGIN_DECLS
 #define INIT_SIP            0x00040000  /**< \brief Enable Sound input maple driver */
 #define INIT_DREAMEYE       0x00080000  /**< \brief Enable DreamEye maple driver */
 #define INIT_MAPLE_ALL      0x000ff000  /**< \brief Enable all Maple drivers */
+
+#define INIT_CDROM          0x00100000  /**< \brief Enable CD-ROM support */
 
 #define INIT_OCRAM          0x10000000  /**< \brief Use half of the dcache as RAM */
 #define INIT_NO_DCLOAD      0x20000000  /**< \brief Disable dcload */

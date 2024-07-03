@@ -13,6 +13,7 @@
 #include <arch/arch.h>
 #include <arch/types.h>
 #include <arch/irq.h>
+#include <arch/memory.h>
 #include <arch/mmu.h>
 #include <kos/dbgio.h>
 #include <arch/cache.h>
@@ -20,12 +21,12 @@
 /********************************************************************************/
 /* Register definitions */
 
-static volatile uint32 * const pteh = (uint32 *)(0xff000000);
-static volatile uint32 * const ptel = (uint32 *)(0xff000004);
-//static volatile uint32 * const ptea = (uint32 *)(0xff000034);
-static volatile uint32 * const ttb = (uint32 *)(0xff000008);
-static volatile uint32 * const tea = (uint32 *)(0xff00000c);
-static volatile uint32 * const mmucr = (uint32 *)(0xff000010);
+static volatile uint32 * const pteh = (uint32 *)(SH4_REG_MMU_PTEH);
+static volatile uint32 * const ptel = (uint32 *)(SH4_REG_MMU_PTEL);
+//static volatile uint32 * const ptea = (uint32 *)(SH4_REG_MMU_PTEA);
+static volatile uint32 * const ttb = (uint32 *)(SH4_REG_MMU_TTB);
+static volatile uint32 * const tea = (uint32 *)(SH4_REG_MMU_TEA);
+static volatile uint32 * const mmucr = (uint32 *)(SH4_REG_MMU_CR);
 
 #define SET_PTEH(VA, ASID) \
     do { *pteh = ((VA) & 0xfffffc00) | ((ASID) & 0xff); } while(0)
@@ -173,7 +174,7 @@ static mmupage_t *map_virt(mmucontext_t *context, int virtpage) {
     /* Get back the virtual address */
     virtpage = virtpage << MMU_IND_BITS;
 
-    /* Mask out and grab the top and bottom indeces */
+    /* Mask out and grab the top and bottom indices */
     top = (virtpage >> MMU_TOP_SHIFT) & MMU_TOP_MASK;
     bot = (virtpage >> MMU_BOT_SHIFT) & MMU_BOT_MASK;
 
@@ -206,7 +207,7 @@ int mmu_virt_to_phys(mmucontext_t *context, int virtpage) {
         return page->physical;
 }
 
-/* Switch to the given context; invalidate any caches as neccessary */
+/* Switch to the given context; invalidate any caches as necessary */
 void mmu_switch_context(mmucontext_t *context) {
     SET_PTEH(0, context->asid);
 }
@@ -225,7 +226,7 @@ static void mmu_page_map_single(mmucontext_t *context,
     /* Get back the virtual address */
     virtpage = virtpage << MMU_IND_BITS;
 
-    /* Mask out and grab the top and bottom indeces */
+    /* Mask out and grab the top and bottom indices */
     top = (virtpage >> MMU_TOP_SHIFT) & MMU_TOP_MASK;
     bot = (virtpage >> MMU_BOT_SHIFT) & MMU_BOT_MASK;
 
@@ -244,7 +245,7 @@ static void mmu_page_map_single(mmucontext_t *context,
     /* Look up the bottom-level page */
     page = sub->page + bot;
 
-    /* XXX Invalidate ITLB if neccessary when page->valid == 1 */
+    /* XXX Invalidate ITLB if necessary when page->valid == 1 */
     page->physical = physpage;
     page->prkey = prot;
 
@@ -665,12 +666,14 @@ void mmu_gen_tlb_miss(const char *what, irq_t source, irq_context_t *context) {
 }
 
 /* Instruction TLB miss exception */
-static void itlb_miss(irq_t source, irq_context_t *context) {
+static void itlb_miss(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     mmu_gen_tlb_miss("itlb_miss", source, context);
 }
 
 /* Instruction TLB protection violation */
-static void itlb_pv(irq_t source, irq_context_t *context) {
+static void itlb_pv(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     dbgio_printf("itlb_pv\n");
     unhandled_mmu(source, context);
 }
@@ -678,29 +681,34 @@ static void itlb_pv(irq_t source, irq_context_t *context) {
 /* Should eventually handle data address read/write here */
 
 /* Data TLB miss (read) */
-static void dtlb_miss_read(irq_t source, irq_context_t *context) {
+static void dtlb_miss_read(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     mmu_gen_tlb_miss("dtlb_miss_read", source, context);
 }
 
 /* Data TLB miss (write) */
-static void dtlb_miss_write(irq_t source, irq_context_t *context) {
+static void dtlb_miss_write(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     mmu_gen_tlb_miss("dtlb_miss_write", source, context);
 }
 
 /* Data TLB protection violation (read) */
-static void dtlb_pv_read(irq_t source, irq_context_t *context) {
+static void dtlb_pv_read(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     dbgio_printf("dtlb_pv_read\n");
     unhandled_mmu(source, context);
 }
 
 /* Data TLB protection violation (write) */
-static void dtlb_pv_write(irq_t source, irq_context_t *context) {
+static void dtlb_pv_write(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     dbgio_printf("dtlb_pv_write\n");
     unhandled_mmu(source, context);
 }
 
 /* Initial page write exception */
-static void initial_page_write(irq_t source, irq_context_t *context) {
+static void initial_page_write(irq_t source, irq_context_t *context, void *data) {
+    (void)data;
     dbgio_printf("initial_page_write\n");
     unhandled_mmu(source, context);
 }
@@ -722,13 +730,13 @@ int mmu_init(void) {
     mmu_shortcut_ok = 0;
 
     /* Set up interrupt handlers */
-    irq_set_handler(EXC_ITLB_MISS, itlb_miss);
-    irq_set_handler(EXC_ITLB_PV, itlb_pv);
-    irq_set_handler(EXC_DTLB_MISS_READ, dtlb_miss_read);
-    irq_set_handler(EXC_DTLB_MISS_WRITE, dtlb_miss_write);
-    irq_set_handler(EXC_DTLB_PV_READ, dtlb_pv_read);
-    irq_set_handler(EXC_DTLB_PV_WRITE, dtlb_pv_write);
-    irq_set_handler(EXC_INITIAL_PAGE_WRITE, initial_page_write);
+    irq_set_handler(EXC_ITLB_MISS, itlb_miss, NULL);
+    irq_set_handler(EXC_ITLB_PV, itlb_pv, NULL);
+    irq_set_handler(EXC_DTLB_MISS_READ, dtlb_miss_read, NULL);
+    irq_set_handler(EXC_DTLB_MISS_WRITE, dtlb_miss_write, NULL);
+    irq_set_handler(EXC_DTLB_PV_READ, dtlb_pv_read, NULL);
+    irq_set_handler(EXC_DTLB_PV_WRITE, dtlb_pv_write, NULL);
+    irq_set_handler(EXC_INITIAL_PAGE_WRITE, initial_page_write, NULL);
 
     /* Turn on MMU */
     /* URB=0x3f, URC=0, SQMD=1, SV=0, TI=1, AT=1 */
@@ -750,11 +758,23 @@ void mmu_shutdown(void) {
     mmu_shortcut_ok = 0;
 
     /* Unhook the IRQ handlers */
-    irq_set_handler(EXC_ITLB_MISS, NULL);
-    irq_set_handler(EXC_ITLB_PV, NULL);
-    irq_set_handler(EXC_DTLB_MISS_READ, NULL);
-    irq_set_handler(EXC_DTLB_MISS_WRITE, NULL);
-    irq_set_handler(EXC_DTLB_PV_READ, NULL);
-    irq_set_handler(EXC_DTLB_PV_WRITE, NULL);
-    irq_set_handler(EXC_INITIAL_PAGE_WRITE, NULL);
+    irq_set_handler(EXC_ITLB_MISS, NULL, NULL);
+    irq_set_handler(EXC_ITLB_PV, NULL, NULL);
+    irq_set_handler(EXC_DTLB_MISS_READ, NULL, NULL);
+    irq_set_handler(EXC_DTLB_MISS_WRITE, NULL, NULL);
+    irq_set_handler(EXC_DTLB_PV_READ, NULL, NULL);
+    irq_set_handler(EXC_DTLB_PV_WRITE, NULL, NULL);
+    irq_set_handler(EXC_INITIAL_PAGE_WRITE, NULL, NULL);
+}
+
+mmu_token_t mmu_disable(void) {
+    mmu_token_t token = (mmu_token_t)*mmucr;
+
+    *mmucr &= ~0x1;
+
+    return token;
+}
+
+void mmu_restore(mmu_token_t token) {
+    *mmucr = (uint32)token;
 }
