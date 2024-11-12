@@ -108,7 +108,7 @@ static void pty_destroy_unused(void);
 #define PF_DIR  1
 
 /* Creates a pty pair */
-int fs_pty_create(char * buffer, int maxbuflen, file_t * master_out, file_t * slave_out) {
+int fs_pty_create(char *buffer, int maxbuflen, file_t *master_out, file_t *slave_out) {
     ptyhalf_t *master, *slave;
     int boot;
     char mname[16], sname[16];
@@ -208,15 +208,12 @@ cleanup:
 /* Autoclean totally unreferenced PTYs (zero refcnt). */
 /* XXX This is a kinda nasty piece of code... goto!! */
 static void pty_destroy_unused(void) {
-    ptyhalf_t * c, * n;
+    ptyhalf_t *c, *n;
     int old;
 
     /* Make sure no one else is messing with the list and then disable
        everything for a bit */
-    if(irq_inside_int())
-        mutex_trylock(&list_mutex);
-    else
-        mutex_lock(&list_mutex);
+    mutex_lock_irqsafe(&list_mutex);
 
     old = irq_disable();
 
@@ -271,7 +268,7 @@ static void * pty_open_dir(const char * fn, int mode) {
 
     (void)fn;
 
-    mutex_lock(&list_mutex);
+    mutex_lock_scoped(&list_mutex);
 
     /* Go through and count the number of items */
     cnt = 0;
@@ -284,7 +281,7 @@ static void * pty_open_dir(const char * fn, int mode) {
 
     if(!dl) {
         errno = ENOMEM;
-        goto done;  /* return */
+        return NULL;
     }
 
     memset(dl, 0, sizeof(dirlist_t));
@@ -293,7 +290,7 @@ static void * pty_open_dir(const char * fn, int mode) {
     if(!dl->items) {
         free(dl);
         errno = ENOMEM;
-        goto done;  /* return */
+        return NULL;
     }
 
     memset(dl->items, 0, sizeof(diritem_t) * cnt);
@@ -319,7 +316,7 @@ static void * pty_open_dir(const char * fn, int mode) {
         free(dl->items);
         free(dl);
         errno = ENOMEM;
-        goto done;  /* return */
+        return NULL;
     }
 
     memset(fdobj, 0, sizeof(pipefd_t));
@@ -327,8 +324,6 @@ static void * pty_open_dir(const char * fn, int mode) {
     fdobj->type = PF_DIR;
     fdobj->mode = mode;
 
-done:
-    mutex_unlock(&list_mutex);
     return (void *)fdobj;
 }
 
@@ -427,18 +422,15 @@ static void * pty_open(vfs_handler_t * vfs, const char * fn, int mode) {
 }
 
 /* Close pty or dirlist */
-static int pty_close(void * h) {
-    pipefd_t * fdobj;
+static int pty_close(void *h) {
+    pipefd_t *fdobj;
 
     assert(h);
     fdobj = (pipefd_t *)h;
 
     if(fdobj->type == PF_PTY) {
         /* De-ref this end of it */
-        if(irq_inside_int())
-            mutex_trylock(&fdobj->d.p->mutex);
-        else
-            mutex_lock(&fdobj->d.p->mutex);
+        mutex_lock_irqsafe(&fdobj->d.p->mutex);
 
         fdobj->d.p->refcnt--;
 
@@ -699,7 +691,7 @@ static int pty_ioctl(void *h, int cmd, va_list ap) {
 
     switch (cmd) {
         case TIOCGETA:
-            if (arg == NULL) {
+            if(arg == NULL) {
                 errno = EINVAL;
                 return -1;
             }
@@ -712,6 +704,65 @@ static int pty_ioctl(void *h, int cmd, va_list ap) {
             errno = ENOTTY;
             return -1;
     }
+}
+
+static int pty_stat(vfs_handler_t *vfs, const char *path, struct stat *st,
+                    int flag) {
+    ptyhalf_t *ph;
+    int id;
+    int master;
+    size_t len = strlen(path);
+
+    (void)vfs;
+    (void)flag;
+
+    /* Root directory '/pty' */
+    if(len == 0 || (len == 1 && *path == '/')) {
+        memset(st, 0, sizeof(struct stat));
+        st->st_dev = (dev_t)('p' | ('t' << 8) | ('y' << 16));
+        st->st_mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
+        st->st_size = -1;
+        st->st_nlink = 2;
+
+        return 0;
+    }
+
+    /* Handle paths that start directly with '/maXX' or '/slXX' */
+    if(sscanf(path, "/%2c%02x", (char[3]){}, &id) != 2) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    /* Check if it's a master (ma) or slave (sl) */
+    master = (path[0] == 'm' && path[1] == 'a');
+
+    /* Find the corresponding PTY half */
+    mutex_lock(&list_mutex);
+    LIST_FOREACH(ph, &ptys, list) {
+        if(ph->id == id) break;
+    }
+    mutex_unlock(&list_mutex);
+
+    /* If PTY is not found, return error */
+    if(!ph) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    /* If the file requested doesn't match the master/slave role, switch */
+    if(master != ph->master) {
+        ph = ph->other;
+    }
+
+    /* Fill in the stat structure */
+    memset(st, 0, sizeof(struct stat));
+    st->st_dev = (dev_t)('p' | ('t' << 8) | ('y' << 16));
+    st->st_mode = S_IFCHR | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+    st->st_nlink = 1;
+    st->st_size = ph->cnt;
+    st->st_blksize = PTY_BUFFER_SIZE;
+
+    return 0;
 }
 
 static int pty_fcntl(void *h, int cmd, va_list ap) {
@@ -777,18 +828,12 @@ static int pty_fstat(void *h, struct stat *st) {
     }
 
     memset(st, 0, sizeof(struct stat));
-
     st->st_dev = (dev_t)('p' | ('t' << 8) | ('y' << 16));
-
-    if(fd->mode & O_DIR) {
-        st->st_mode = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
-    }
-    else {
-        st->st_mode = S_IFCHR | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP |
-            S_IROTH | S_IWOTH;
-        st->st_size = (off_t)fd->d.p->cnt;
-        st->st_blksize = 1;
-    }
+    st->st_mode = (fd->mode & O_DIR) ? 
+        (S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO) : 
+        (S_IFCHR | S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    st->st_size = (fd->mode & O_DIR) ? -1 : (off_t)fd->d.p->cnt;
+    st->st_blksize = (fd->mode & O_DIR) ? 0 : 1;
 
     return 0;
 }
@@ -819,7 +864,7 @@ static vfs_handler_t vh = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    pty_stat,
     NULL,
     NULL,
     pty_fcntl,
@@ -875,11 +920,7 @@ int fs_pty_shutdown(void) {
     if(!initted)
         return 0;
 
-    /* If we're in an int, lets do the trylock */
-    if(irq_inside_int())
-        mutex_trylock(&list_mutex);
-    else
-        mutex_lock(&list_mutex);
+    mutex_lock_irqsafe(&list_mutex);
 
     /* Go through and free all the pty entries */
     c = LIST_FIRST(&ptys);
